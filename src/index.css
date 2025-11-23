@@ -1,0 +1,23 @@
+.mandala-tooltip {
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+}
+
+.mandala-arc {
+  transition: transform 0.2s ease, stroke-width 0.2s ease;
+}
+
+.mandala-arc:hover {
+  transform: scale(1.01);
+}
+
+.ring-tooltip {
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(8px);
+}
+
+.sunburst-tooltip {
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(8px);
+}
+
