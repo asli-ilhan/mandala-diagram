@@ -6,6 +6,7 @@ import { systemModelTree } from "../data/systemModelData";
 const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
   const svgRef = useRef(null);
   const [selectedRingIndex, setSelectedRingIndex] = useState(null); // 1..4, null = none
+  const [selectedDefinition, setSelectedDefinition] = useState(null); // "Literacy", "Visibility", "Accountability", or null
 
   // Outermost layer (Literacy / Visibility / Accountability) for legend pills
   const outermost =
@@ -414,6 +415,13 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
     }
   ];
 
+  // Definitions for Literacy, Visibility, and Accountability
+  const definitions = {
+    Literacy: "The ability to recognise how data moves through systems and how hidden operations shape digital environments. It means understanding the processes that record, encode, transform, route and circulate information, and how these processes affect the conditions in which inequality is produced from offline to online.",
+    Visibility: "What becomes perceptible once the underlying operations of mediation are understood. It means being able to identify how decisions, processes and structures across systems contribute to patterns of inequality that would otherwise remain concealed.",
+    Accountability: "The practice of responding to what becomes visible. It involves holding systems, methods and decisions to account and making informed choices in design, research and professional practice that address how inequality is created and sustained."
+  };
+
   const literacyItems =
     outermost && outermost.children
       ? outermost.children.map((c) => c.name)
@@ -503,36 +511,82 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
           ))}
         </div>
 
+        {/* Clickable definitions */}
         <div
           style={{
-            marginTop: "10px",
+            marginTop: "16px",
             display: "flex",
             flexWrap: "wrap",
             gap: "6px",
-            alignItems: "center",
-            color: "#9ca3af",
-            fontSize: "12px"
+            alignItems: "center"
           }}
         >
-          <span style={{ marginRight: "4px" }}>
-            Interpretation & response:
-          </span>
           {literacyItems.map((label, idx) => (
             <React.Fragment key={label}>
-              {idx > 0 && <span>→</span>}
-              <span
+              {idx > 0 && (
+                <span style={{ color: "#9ca3af", fontSize: "12px" }}>→</span>
+              )}
+              <button
+                onClick={() => {
+                  setSelectedDefinition(selectedDefinition === label ? null : label);
+                }}
                 style={{
-                  border: "1px solid rgba(148,163,184,0.6)",
+                  border: `1px solid ${
+                    selectedDefinition === label
+                      ? "rgba(148,163,184,0.9)"
+                      : "rgba(148,163,184,0.6)"
+                  }`,
                   borderRadius: "999px",
-                  padding: "2px 10px",
-                  color: "#e5e7eb"
+                  padding: "6px 14px",
+                  color: "#e5e7eb",
+                  background:
+                    selectedDefinition === label
+                      ? "rgba(148,163,184,0.15)"
+                      : "transparent",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  fontWeight: selectedDefinition === label ? 600 : 400,
+                  transition: "all 0.2s ease"
                 }}
               >
                 {label}
-              </span>
+              </button>
             </React.Fragment>
           ))}
         </div>
+
+        {/* Definition display */}
+        {selectedDefinition && (
+          <div
+            style={{
+              marginTop: "16px",
+              padding: "16px",
+              background: "rgba(15,23,42,0.6)",
+              borderRadius: "8px",
+              border: "1px solid rgba(148,163,184,0.3)"
+            }}
+          >
+            <div
+              style={{
+                fontSize: "14px",
+                fontWeight: 600,
+                marginBottom: "8px",
+                color: "#e5e7eb"
+              }}
+            >
+              {selectedDefinition}
+            </div>
+            <div
+              style={{
+                fontSize: "13px",
+                color: "#cbd5e1",
+                lineHeight: 1.6
+              }}
+            >
+              {definitions[selectedDefinition]}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
