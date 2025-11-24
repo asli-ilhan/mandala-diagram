@@ -38,7 +38,7 @@ function App() {
           textAlign: "center"
         }}
       >
-        Created by Ceren Yüksel and Aslı İlhan
+        Designed by Dr. Ceren Yuksel, Created by Asli Ilhan.
       </div>
     </div>
   );
