@@ -38,7 +38,17 @@ function App() {
           textAlign: "center"
         }}
       >
-        Designed by Course Leader & Senior Lecturer Dr. Ceren Yuksel Created by Associate Lecturer Asli Ilhan
+        Designed by Course Leader & Senior Lecturer Dr. Ceren Yuksel
+      </div>
+      <div
+        style={{
+          marginTop: "24px",
+          fontSize: "12px",
+          color: "#9ca3af",
+          textAlign: "center"
+        }}
+      >
+        Created by Associate Lecturer Asli Ilhan
       </div>
     </div>
   );
