@@ -33,8 +33,8 @@ function App() {
       <div
         style={{
           marginTop: "24px",
-          fontSize: "10px",
-          color: "#6b7280",
+          fontSize: "12px",
+          color: "#9ca3af",
           textAlign: "center"
         }}
       >
