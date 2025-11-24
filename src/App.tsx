@@ -30,6 +30,16 @@ function App() {
         ---
       </p>
       <FocusedRingSunburst width={1000} height={1000} />
+      <div
+        style={{
+          marginTop: "24px",
+          fontSize: "10px",
+          color: "#6b7280",
+          textAlign: "center"
+        }}
+      >
+        Created by Ceren Yüksel and Aslı İlhan
+      </div>
     </div>
   );
 }
