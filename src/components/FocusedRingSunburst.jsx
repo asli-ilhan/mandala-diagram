@@ -24,6 +24,29 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
     const container = d3.select(svgEl.parentNode);
     container.selectAll(".sunburst-tooltip").remove();
 
+    // Helper function to position tooltip relative to container
+    const positionTooltip = (event) => {
+      const containerRect = container.node().getBoundingClientRect();
+      const tooltipWidth = 260; // max-width
+      const tooltipHeight = 80; // approximate height
+      const offset = 15;
+      
+      let left = event.clientX - containerRect.left + offset;
+      let top = event.clientY - containerRect.top + offset;
+      
+      // Keep tooltip within container bounds
+      if (left + tooltipWidth > containerRect.width) {
+        left = event.clientX - containerRect.left - tooltipWidth - offset;
+      }
+      if (top + tooltipHeight > containerRect.height) {
+        top = event.clientY - containerRect.top - tooltipHeight - offset;
+      }
+      if (left < 0) left = offset;
+      if (top < 0) top = offset;
+      
+      return { left: left + "px", top: top + "px" };
+    };
+
     const tooltip = container
       .append("div")
       .attr("class", "sunburst-tooltip")
@@ -117,9 +140,8 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
           );
       })
       .on("mousemove", (event) => {
-        tooltip
-          .style("left", event.pageX + 15 + "px")
-          .style("top", event.pageY + 15 + "px");
+        const pos = positionTooltip(event);
+        tooltip.style("left", pos.left).style("top", pos.top);
       })
       .on("mouseout", (event) => {
         d3.select(event.currentTarget)
@@ -254,9 +276,8 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
           );
       })
       .on("mousemove", (event) => {
-        tooltip
-          .style("left", event.pageX + 15 + "px")
-          .style("top", event.pageY + 15 + "px");
+        const pos = positionTooltip(event);
+        tooltip.style("left", pos.left).style("top", pos.top);
       })
       .on("mouseout", (event, d) => {
         d3.select(event.currentTarget)
@@ -338,9 +359,8 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
           );
       })
       .on("mousemove", (event) => {
-        tooltip
-          .style("left", event.pageX + 15 + "px")
-          .style("top", event.pageY + 15 + "px");
+        const pos = positionTooltip(event);
+        tooltip.style("left", pos.left).style("top", pos.top);
       })
       .on("mouseout", (event, d) => {
         d3.select(event.currentTarget)
