@@ -7,6 +7,29 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
   const svgRef = useRef(null);
   const [selectedRingIndex, setSelectedRingIndex] = useState(null); // 1..4, null = none
   const [selectedDefinition, setSelectedDefinition] = useState(null); // "Literacy", "Visibility", "Accountability", or null
+  const [hoveredRingIndex, setHoveredRingIndex] = useState(null); // for freeze-on-hover
+
+  // rotation angles per ring (in radians)
+  const rotationAnglesRef = useRef({
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0
+  });
+
+  // refs to access latest selected/hovered inside animation loop
+  const selectedRef = useRef(null);
+  const hoveredRef = useRef(null);
+  const animationFrameRef = useRef(null);
+
+  // keep refs in sync with state
+  useEffect(() => {
+    selectedRef.current = selectedRingIndex;
+  }, [selectedRingIndex]);
+
+  useEffect(() => {
+    hoveredRef.current = hoveredRingIndex;
+  }, [hoveredRingIndex]);
 
   // Outermost layer (Literacy / Visibility / Accountability) for legend pills
   const outermost =
@@ -17,6 +40,11 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
   useEffect(() => {
     const svgEl = svgRef.current;
     if (!svgEl) return;
+
+    // cancel any previous animation frame before redrawing
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
 
     const svg = d3.select(svgEl);
     svg.selectAll("*").remove();
@@ -30,10 +58,10 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
       const tooltipWidth = 260; // max-width
       const tooltipHeight = 80; // approximate height
       const offset = 15;
-      
+
       let left = event.clientX - containerRect.left + offset;
       let top = event.clientY - containerRect.top + offset;
-      
+
       // Keep tooltip within container bounds
       if (left + tooltipWidth > containerRect.width) {
         left = event.clientX - containerRect.left - tooltipWidth - offset;
@@ -43,7 +71,7 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
       }
       if (left < 0) left = offset;
       if (top < 0) top = offset;
-      
+
       return { left: left + "px", top: top + "px" };
     };
 
@@ -102,8 +130,7 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
       },
       {
         label: "Positionalities",
-        subline:
-          "Who is structurally situated differently inside systems"
+        subline: "Who is structurally situated differently inside systems"
       }
     ];
 
@@ -178,7 +205,8 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
     // ---- Ring radii ----
     const ringGeometry = ringsRaw.map((ring, i) => {
       const index = i + 1; // 1..4
-      const innerRadius = centreRadius + gap + (index - 1) * (baseRingWidth + gap);
+      const innerRadius =
+        centreRadius + gap + (index - 1) * (baseRingWidth + gap);
       let outerRadius = innerRadius + baseRingWidth;
 
       // make outermost ring slightly smaller
@@ -238,13 +266,17 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
       .endAngle((d) => d.endAngle)
       .cornerRadius(1.5);
 
-    // ---- Base ring bands (clickable, subtle tint) ----
-    const ringGroup = g.append("g").attr("class", "rings");
-
-    ringGroup
-      .selectAll("path.ring-base")
+    // ---- Base ring bands (as groups, so we can rotate each ring) ----
+    const ringLayers = g
+      .append("g")
+      .attr("class", "ring-layers")
+      .selectAll("g.ring-layer")
       .data(ringGeometry)
-      .join("path")
+      .join("g")
+      .attr("class", "ring-layer");
+
+    ringLayers
+      .append("path")
       .attr("class", "ring-base")
       .attr("d", fullRingArc)
       .attr("fill", (d) => {
@@ -265,6 +297,7 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
       )
       .style("cursor", "pointer")
       .on("mouseover", (event, d) => {
+        setHoveredRingIndex(d.ringIndex);
         d3.select(event.currentTarget)
           .attr("stroke-width", 1.9)
           .attr("stroke", "#e5e7eb")
@@ -280,9 +313,13 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
         tooltip.style("left", pos.left).style("top", pos.top);
       })
       .on("mouseout", (event, d) => {
+        setHoveredRingIndex((prev) => (prev === d.ringIndex ? null : prev));
         d3.select(event.currentTarget)
           .attr("stroke", ringColors[d.ringIndex] || "#64748b")
-          .attr("stroke-width", d.ringIndex === selectedRingIndex ? 1.6 : 0.9)
+          .attr(
+            "stroke-width",
+            d.ringIndex === selectedRingIndex ? 1.6 : 0.9
+          )
           .attr(
             "stroke-opacity",
             selectedRingIndex && d.ringIndex !== selectedRingIndex ? 0.35 : 0.8
@@ -295,7 +332,7 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
         );
       });
 
-    // ---- Ring labels + sublines ----
+    // ---- Ring labels + sublines (do NOT rotate; they stay fixed) ----
     const labelGroup = g.append("g").attr("class", "ring-labels");
 
     labelGroup
@@ -329,13 +366,17 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
         }
       });
 
-    // ---- Slices (always visible outlines) ----
-    const sliceGroup = g.append("g").attr("class", "ring-slices");
-
-    sliceGroup
-      .selectAll("path.slice")
+    // ---- Slices as groups (so they rotate with their ring) ----
+    const sliceLayers = g
+      .append("g")
+      .attr("class", "slice-layers")
+      .selectAll("g.slice-layer")
       .data(allSlices)
-      .join("path")
+      .join("g")
+      .attr("class", "slice-layer");
+
+    sliceLayers
+      .append("path")
       .attr("class", "slice")
       .attr("d", sliceArc)
       .attr("fill", "none")
@@ -348,6 +389,7 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
       )
       .style("cursor", "pointer")
       .on("mouseover", (event, d) => {
+        setHoveredRingIndex(d.ringIndex);
         d3.select(event.currentTarget)
           .attr("stroke-width", 1.8)
           .attr("stroke", "#e5e7eb")
@@ -363,9 +405,13 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
         tooltip.style("left", pos.left).style("top", pos.top);
       })
       .on("mouseout", (event, d) => {
+        setHoveredRingIndex((prev) => (prev === d.ringIndex ? null : prev));
         d3.select(event.currentTarget)
           .attr("stroke", ringColors[d.ringIndex] || "#64748b")
-          .attr("stroke-width", d.ringIndex === selectedRingIndex ? 1.4 : 0.6)
+          .attr(
+            "stroke-width",
+            d.ringIndex === selectedRingIndex ? 1.4 : 0.6
+          )
           .attr(
             "stroke-opacity",
             selectedRingIndex && d.ringIndex !== selectedRingIndex
@@ -409,6 +455,57 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
         .style("pointer-events", "none")
         .text((d) => d.name);
     }
+
+    // ---- INITIAL TRANSFORM (respect existing angles when re-drawing) ----
+    const initialAngles = rotationAnglesRef.current;
+    ringLayers.attr("transform", (d) => {
+      const a = initialAngles[d.ringIndex] || 0;
+      return `rotate(${(a * 180) / Math.PI})`;
+    });
+    sliceLayers.attr("transform", (d) => {
+      const a = initialAngles[d.ringIndex] || 0;
+      return `rotate(${(a * 180) / Math.PI})`;
+    });
+
+    // ---- ANIMATION: counter-rotating rings (slow organic) ----
+    const rotationSpeeds = {
+      1: 0.0004, // clockwise
+      2: -0.0003, // counter-clockwise
+      3: 0.00035,
+      4: -0.00025
+    };
+
+    const animate = () => {
+      const angles = rotationAnglesRef.current;
+
+      Object.keys(angles).forEach((key) => {
+        const idx = Number(key);
+        // freeze ring if it is selected or hovered
+        if (selectedRef.current === idx || hoveredRef.current === idx) return;
+        angles[idx] += rotationSpeeds[idx];
+      });
+
+      ringLayers.attr("transform", (d) => {
+        const a = angles[d.ringIndex] || 0;
+        return `rotate(${(a * 180) / Math.PI})`;
+      });
+
+      sliceLayers.attr("transform", (d) => {
+        const a = angles[d.ringIndex] || 0;
+        return `rotate(${(a * 180) / Math.PI})`;
+      });
+
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animate);
+
+    // cleanup
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
   }, [width, height, selectedRingIndex]);
 
   // Legend data
@@ -426,20 +523,25 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
     {
       color: "#22c55e",
       title: "Lived experience",
-      text: "Inequalities across narrative, embodiment, materiality, labour, care, authorship, affect and relationality."
+      text:
+        "Inequalities across narrative, embodiment, materiality, labour, care, authorship, affect and relationality."
     },
     {
       color: "#fb923c",
       title: "Positionality",
-      text: "Structural inequalities across race, class, gender, language, disability and related categories."
+      text:
+        "Structural inequalities across race, class, gender, language, disability and related categories."
     }
   ];
 
   // Definitions for Literacy, Visibility, and Accountability
   const definitions = {
-    Literacy: "The ability to recognise how data moves through systems and how hidden operations shape digital environments. It means understanding the processes that record, encode, transform, route and circulate information, and how these processes affect the conditions in which inequality is produced from offline to online.",
-    Visibility: "What becomes perceptible once the underlying operations of mediation are understood. It means being able to identify how decisions, processes and structures across systems contribute to patterns of inequality that would otherwise remain concealed.",
-    Accountability: "The practice of responding to what becomes visible. It involves holding systems, methods and decisions to account and making informed choices in design, research and professional practice that address how inequality is created and sustained."
+    Literacy:
+      "The ability to recognise how data moves through systems and how hidden operations shape digital environments. It means understanding the processes that record, encode, transform, route and circulate information, and how these processes affect the conditions in which inequality is produced from offline to online.",
+    Visibility:
+      "What becomes perceptible once the underlying operations of mediation are understood. It means being able to identify how decisions, processes and structures across systems contribute to patterns of inequality that would otherwise remain concealed.",
+    Accountability:
+      "The practice of responding to what becomes visible. It involves holding systems, methods and decisions to account and making informed choices in design, research and professional practice that address how inequality is created and sustained."
   };
 
   const literacyItems =
@@ -460,7 +562,10 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
         margin: "0 auto"
       }}
     >
-      <svg ref={svgRef} style={{ width: "100%", height: "auto", display: "block" }} />
+      <svg
+        ref={svgRef}
+        style={{ width: "100%", height: "auto", display: "block" }}
+      />
 
       {/* Legend */}
       <div
@@ -548,7 +653,9 @@ const FocusedRingSunburst = ({ width = 720, height = 720 }) => {
               )}
               <button
                 onClick={() => {
-                  setSelectedDefinition(selectedDefinition === label ? null : label);
+                  setSelectedDefinition(
+                    selectedDefinition === label ? null : label
+                  );
                 }}
                 style={{
                   border: `1px solid ${
